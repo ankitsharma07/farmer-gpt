@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Chat Interface</title>
+    <style>
+        /* Add your CSS styles here */
+
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f2f2f2;
+        }
+
+        .chat-container {
+            max-width: 800px;
+            padding: 20px;
+            overflow-y: scroll;
+            height: 400px;
+            border: 1px solid #ccc;
+            background-color: #f8f8f8;
+            margin-bottom: 20px;
+        }
+
+        .chat-bubble {
+            display: inline-block;
+            padding: 10px;
+            margin: 5px;
+            border-radius: 5px;
+            max-width: 60%;
+            word-wrap: break-word;
+        }
+
+        .chat-bubble.user {
+            background-color: #d9e6ff;
+            float: right;
+            clear: both;
+        }
+
+        .chat-bubble.assistant {
+            background-color: #e6e6e6;
+            float: left;
+            clear: both;
+        }
+
+        .input-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            max-width: 800px;
+        }
+    </style>
+    <!-- Include jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <div class="chat-container">
+        {% for message in messages %}
+            <div class="chat-bubble {% if message.is_user %}user{% else %}assistant{% endif %}">
+                {{ message.content }}
+            </div>
+        {% endfor %}
+    </div>
+    <div class="input-container">
+           <form id="message-form">
+               <input type="text" id="message-input" placeholder="Type your message..." />
+               <button type="submit">Send</button>
+               <button type="button" id="record-button">Record</button>
+           </form>
+    </div>
+    <script>
+        $(document).ready(function () {
+            let mediaRecorder;
+            let recordedChunks = [];
+
+            function addMessageToChat(content, isUser) {
+                const messageClass = isUser ? 'user' : 'assistant';
+                const messageBubble = $('<div>').addClass('chat-bubble').addClass(messageClass).text(content);
+                $('.chat-container').append(messageBubble);
+                $('.chat-container').scrollTop($('.chat-container')[0].scrollHeight);
+            }
+
+            // Handle form submission to send chat messages
+            $('#message-form').on('submit', function (e) {
+                e.preventDefault();
+                const message = $('#message-input').val().trim();
+                if (message) {
+                    addMessageToChat(message, true);
+
+                    $.ajax({
+                        url: '/process_message/',
+                        type: 'POST',
+                        data: JSON.stringify({message: message}),
+                        contentType: 'application/json; charset=utf-8',
+                        success: function (data) {
+                            // Update the chat interface with the assistant's response
+                            addMessageToChat(data.response, false);
+                        },
+                        error: function (error) {
+                            console.error('Error:', error);
+                        }
+                    });
+                }
+                $('#message-input').val('');
+            });
+
+            // Implement the recording functionality using the MediaRecorder API
+            $('#record-button').on('mousedown', function () {
+                navigator.mediaDevices.getUserMedia({audio: true})
+                    .then(function (stream) {
+                        mediaRecorder = new MediaRecorder(stream);
+                        mediaRecorder.start();
+
+                        mediaRecorder.addEventListener('dataavailable', function (e) {
+                            recordedChunks.push(e.data);
+                        });
+
+                        mediaRecorder.addEventListener('stop', function () {
+                            const audioBlob = new Blob(recordedChunks, {type: 'audio/wav'});
+                            recordedChunks = [];
+
+                            // TODO: Send recorded audio to the Django backend and process it using the Whisper ASR API
+                            console.log('Audio Blob:', audioBlob);
+                        });
+                    })
+                    .catch(function (err) {
+                        console.error('Error accessing audio:', err);
+                    });
+            });
+
+            // Stop recording when the record button is released
+            $('#record-button').on('mouseup', function () {
+                if (mediaRecorder && mediaRecorder.state === 'recording') {
+                    mediaRecorder.stop();
+                }
+            });
+        });
+    </script>
+</body>
+</html>

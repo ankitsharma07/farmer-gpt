@@ -24,9 +24,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure-e2+6143r#k^d#5l0!f&mylaam_k_9hh07l%%f0+@p@gpzatm$4'
 
+OPENAI_API_KEY="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"
+
 # load from .env
-load_dotenv()
-OPENAI_API_KEY=os.getenv("OPENAI_API_KEY")
+# load_dotenv()
+# OPENAI_API_KEY=os.getenv("OPENAI_API_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
